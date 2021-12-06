@@ -7,16 +7,20 @@ namespace Common
 {
     public class MessageSender
     {
-        protected MessageHandle _messageHandler;
-
         public virtual void Send(IBaseMessage message, Socket socket)
         {
             if (socket == null)
             {
                 return;
             }
-            int messageId = _messageHandler.MsgConfig.GetMessageId(message);
+            int messageId = MessageHandle.MsgConfig.GetMessageId(message);
+            if (messageId == 0)
+            {
+                throw new Exception($"No id specified for type {message.GetType()} create it with 'AddMessageType' in MessageFactory");
+            }
             var buffer = CreateBuffer(messageId, message);
+
+            Console.WriteLine($"SEND MESSAGE {message} ({messageId})");
 
             socket.Send(buffer);
         }
@@ -33,13 +37,12 @@ namespace Common
         }
     }
 
-    public class ResponseToClient : MessageSender
+    public class ResponseToMachine : MessageSender
     {
         readonly Socket _socket;
 
-        public ResponseToClient(MessageHandle msgHandler, Socket socket)
+        public ResponseToMachine(Socket socket)
         {
-            _messageHandler = msgHandler;
             _socket = socket;
         }
 

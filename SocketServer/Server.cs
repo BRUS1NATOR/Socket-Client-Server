@@ -13,9 +13,8 @@ namespace SocketServer
         readonly IPEndPoint _localEndPoint;
         readonly IPAddress _ipAddress;
 
-        public Server(int port, MessageHandle messageConfig, int maxConnections = 10)
+        public Server(int port, int maxConnections = 10)
         {
-            _messageHandler = messageConfig;
             // Get Host IP Address that is used to establish a connection
             // In this case, we get one IP address of localhost that is IP : 127.0.0.1
             // If a host has multiple addresses, you will get a list of addresses
@@ -64,6 +63,10 @@ namespace SocketServer
                     {
                         bytes = new byte[8192];
                         int bytesRec = socket.Receive(bytes);
+                        if (bytesRec == 0)
+                        {
+                            continue;
+                        }
                     }
                     catch(Exception e)
                     {
@@ -72,7 +75,7 @@ namespace SocketServer
                     }
 
                     receive = new ByteBuffer(bytes);
-                    _messageHandler.HandleMessage(bytes, socket);
+                    MessageHandle.HandleMessage(bytes, socket);
                 }
 
                 socket.Shutdown(SocketShutdown.Both);

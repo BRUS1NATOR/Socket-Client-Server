@@ -5,15 +5,35 @@ using System.Text;
 
 namespace Common.MessageHandlers
 {
-    public class MessageHandle
+    public static class MessageHandle
     {
-        public readonly MessageConfig MsgConfig;
-        public MessageHandle(MessageConfig messageConfig)
+        public delegate void MessageHandler<T>(T message, ResponseToMachine socketToRespond) where T : IBaseMessage;
+
+        private static IDictionary<MessageIdentifier, MessageHandler<IBaseMessage>> MessageHandlers;
+
+        public static MessageConfig MsgConfig;
+
+        public static void Initialize(MessageConfig messageConfig)
         {
+            MessageHandlers = new Dictionary<MessageIdentifier, MessageHandler<IBaseMessage>>();
             MsgConfig = messageConfig;
         }
 
-        public string HandleMessage(byte[] data, Socket socketToRespond)
+        public static void RegisterMessageHandler<T>(MessageHandler<IBaseMessage> handler)
+        {
+            MessageHandlers.Add(MsgConfig.GetMessageIdentifier(typeof(T)), handler);
+        }
+
+        public static IEnumerable<MessageHandler<IBaseMessage>> GetHandlers(int id)
+        {
+            return MessageHandlers.Where(x => x.Key.MessageId == id).Select(x => x.Value);
+        }
+        public static IEnumerable<MessageHandler<IBaseMessage>> GetHandlers(Type type)
+        {
+            return MessageHandlers.Where(x => x.Key.MessageType.Equals(type)).Select(x => x.Value);
+        }
+
+        public static string HandleMessage(byte[] data, Socket socketToRespond)
         {
             try
             {
@@ -31,9 +51,15 @@ namespace Common.MessageHandlers
 
                 try
                 {
-                    foreach (var handler in MsgConfig.GetHandlers(packetID))
+                    var handlers = GetHandlers(packetID);
+                    if (!handlers.Any())
                     {
-                        handler.Invoke(message, new ResponseToClient(this, socketToRespond));
+                        Console.WriteLine($"No handlers found for {packetID}");
+                        socketToRespond.Close();
+                    }
+                    foreach (var handler in handlers)
+                    {
+                        handler.Invoke(message, new ResponseToMachine(socketToRespond));
                     }
                 }
                 catch (Exception ex)

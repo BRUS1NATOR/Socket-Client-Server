@@ -1,14 +1,20 @@
 ﻿using Common;
+using Common.Message.Server;
 using Common.MessageHandlers;
-using Common.MessageHandlers.Handlers.Client;
 using Common.Messages;
 using Common.Messages.Client;
+using SocketClient;
 
 MessageConfig msgConf = new MessageConfig();
-msgConf.DefaultHandlers().ServerHandlers().ClientHandlers();
-MessageHandle msgHandler = new MessageHandle(msgConf);
+msgConf.Initialize();
+MessageHandle.Initialize(msgConf);
 
-Client client = new Client("localhost", 5000, msgHandler);
+ClientMessageHandler clientHandler = new();
+
+MessageHandle.RegisterMessageHandler<ServerResponseNumMessage>(clientHandler.HandleTargetType<ServerResponseNumMessage>);
+
+
+Client client = new Client("localhost", 5000);
 
 ClientRequestNumMessage message = new ClientRequestNumMessage();
 message.Message = "Throw me some numbers";
@@ -29,10 +35,11 @@ client.Receive();
 Console.WriteLine("Shutdown..");
 client.Dispose();
 
-ClientResponseFactorialMessage response = new ClientResponseFactorialMessage(){ Num = StaticData.Number, Factorial = StaticData.Fact};
-message.Message = "Throw me some numbers";
+ClientResponseFactorialMessage response = new ClientResponseFactorialMessage(){ 
+    Num = ClientMessageHandler.Number, Factorial = ClientMessageHandler.Fact };
 
-client = new Client("localhost", 5000, msgHandler);
+
+client = new Client("localhost", 5000);
 client.Send(response);
 
 

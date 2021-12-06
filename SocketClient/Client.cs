@@ -12,10 +12,9 @@ public class Client : MessageSender, IDisposable
     readonly IPEndPoint _ipEndPoint;
 
 
-    public Client(string server, int port, MessageHandle msgHandler)
+    public Client(string server, int port)
     {
         Instance = this;
-        _messageHandler = msgHandler;
         IPHostEntry hostEntry = Dns.GetHostEntry(server);
         foreach (IPAddress address in hostEntry.AddressList)
         {
@@ -41,13 +40,7 @@ public class Client : MessageSender, IDisposable
 
     public void Send(IBaseMessage message)
     {
-        int messageId = _messageHandler.MsgConfig.GetMessageId(message.GetType());
-        if (messageId == 0)
-        {
-            throw new Exception($"No id specified for type {message.GetType()} create it with 'AddMessageType' in MessageFactory");
-        }
-        var buffer = CreateBuffer(messageId, message);
-        _clientSocket.Send(buffer);
+        base.Send(message, _clientSocket);
     }
 
     public void Send(byte[] buffer)
@@ -61,7 +54,7 @@ public class Client : MessageSender, IDisposable
         byte[] bytes = new byte[8192];
         _clientSocket.Receive(bytes);
 
-        _messageHandler.HandleMessage(bytes, _clientSocket);
+        MessageHandle.HandleMessage(bytes, _clientSocket);
     }
 
     public void Dispose()
